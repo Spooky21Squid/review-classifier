@@ -1,6 +1,3 @@
-# The vocab consists of 89527 unique words
-
-from os.path import exists
 from dotenv import load_dotenv
 import os
 import math
@@ -110,15 +107,19 @@ class Model:
     
     def getProbability(self, sample, i):
         """Calculates the probability of the sample being in the class i"""
-        
-        pClass = self.totalClasses[i] / self.total  # The prior probability of the sample being in class i
-        totalP = pClass
+        try:
+            pClass = math.log(self.totalClasses[i] / self.total)  # The prior probability of the sample being in class i
+        except:
+            pClass = 0
+        totalP = 0
 
         # Multiply totalP by the probability of each word in the sample being in class i
         for wordID, freq in sample.features.items():
-            #totalP *= math.pow(self.wordTotals[i][wordID] self.wordTotals[i].get(wordID, self.zeroFrequencyProbabilities[i]), freq)
-            totalP *= math.pow(self.wordTotals[i].get(wordID, self.zeroFrequencyProbabilities[i]), freq)
+            for j in range(freq):
+                totalP += math.log(self.wordTotals[i].get(wordID, self.zeroFrequencyProbabilities[i]))
+            #totalP *= math.pow(self.wordTotals[i].get(wordID, self.zeroFrequencyProbabilities[i]), freq)
 
+        totalP *= pClass
         return totalP
 
 
@@ -199,6 +200,7 @@ if __name__ == "__main__":
     samples = readBOW(os.environ['TESTDATA'])
     numCorrect = 0
     total = 0
+    withinX = dict()  # Keys: difference, values: frequency
 
     for sample in samples:
         predictedClass = model.predict(sample)
@@ -206,7 +208,17 @@ if __name__ == "__main__":
         if predictedClass == actualClass:
             numCorrect += 1
         total += 1
+
+        # Find difference
+        diff = abs(predictedClass - sample.getLabel())
+        if diff in withinX:
+            withinX[diff] += 1
+        else:
+            withinX[diff] = 1
     
     accuracy = (numCorrect / total) * 100
 
     print("Accuracy: %.2f" % (accuracy))
+    print("Differences:")
+    for k,v in withinX.items():
+        print("%d : %.2f" % (k, (v / total) * 100))

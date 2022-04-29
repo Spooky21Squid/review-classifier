@@ -129,13 +129,16 @@ class Model:
     def getProbability(self, tokens, i):
         """Calculates the probability of the sample being in the class i"""
         
-        pClass = self.totalClasses[i] / self.total  # The prior probability of the sample being in class i
-        totalP = pClass
+        pClass = math.log(self.totalClasses[i] / self.total)  # The prior probability of the sample being in class i
+        totalP = 0
 
         # Multiply totalP by the probability of each word in the sample being in class i
         for word, freq in tokens.items():
-            totalP *= math.pow(self.wordTotals[i].get(word, self.zeroFrequencyProbabilities[i]), freq)
+            for j in range(freq):
+                totalP += math.log(self.wordTotals[i].get(word, self.zeroFrequencyProbabilities[i]))
+            #totalP *= math.pow(self.wordTotals[i].get(word, self.zeroFrequencyProbabilities[i]), freq)
 
+        totalP *= pClass
         return totalP
 
 
@@ -173,6 +176,7 @@ if __name__ == "__main__":
 
     numCorrect = 0
     total = 0
+    withinX = dict()  # Keys: difference, values: frequency
 
     stopWords = set()
     with open(os.environ['STOPWORDS']) as f:
@@ -192,7 +196,17 @@ if __name__ == "__main__":
                 if predictedClass == label:
                     numCorrect += 1
                 total += 1
+
+                # Find difference
+                diff = abs(predictedClass - label)
+                if diff in withinX:
+                    withinX[diff] += 1
+                else:
+                    withinX[diff] = 1
     
     accuracy = (numCorrect / total) * 100
 
-    print("Accuracy: %.2f" % (accuracy))
+    print("Accuracy: %.2f\n" % (accuracy))
+    print("Differences:")
+    for k,v in withinX.items():
+        print("%d : %.2f" % (k, (v / total) * 100))
