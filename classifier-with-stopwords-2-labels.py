@@ -4,13 +4,24 @@ import os
 import math
 import re
 
+# Creating the Model
+# - Input 2 directories - one containing positive samples, one containing negative samples
+# - Input the path to the file containing stopwords to remove from the samples
+
+# Using the Model
+# - Load some text and clean/tokenise it using the tokenise method
+# - Input the tokens into the predict method, it will return a label
+
+
 class Model:
     """A naive-bayes model trained on the set of IMDB reviews"""
 
     def __init__(self, posDir, negDir, stopWordsPath, alpha=1):
         """Constructs a multinomial naive-bayes model using a Bag of Words approach with logarithmic probability and stopwords. 
-        dataDirs - a list of directories containing the sample reviews. stopWordsPath - A path to a file containing a list of 
-        stop words to remove from samples. alpha - The value for smoothing, default is 1"""
+        posDir - A directory containing the positive samples.
+        negDir - A directory containing the negative samples.
+        stopWordsPath - A path to a file containing a list of stop words to remove from samples.
+        alpha - The value for smoothing, default is 1 (laplace smoothing)"""
 
         # Read the list of stop words from a file
         self.stopWords = set()  # A set of stopwords
@@ -50,15 +61,12 @@ class Model:
 
         for class_, histogram in self.wordTotals.items():
 
-            #print("Class %d:" % (class_))
             totalWordsInClass = 0
             for freq in histogram.values():
                 totalWordsInClass += freq
-            #print("total words: %d" % (totalWordsInClass))
             
             # Adjust the total word count for alpha
             adjustedTotalWordsInClass = totalWordsInClass + self.alpha * self.x
-            #print("adjusted total words after smoothing: %d" % (adjustedTotalWordsInClass))
 
             for word in histogram.keys():
                 freq = histogram[word]
@@ -71,24 +79,14 @@ class Model:
             probZeroFreq = self.alpha / adjustedTotalWordsInClass  # P of seeing a single non-frequency word
             self.zeroFrequencyProbabilities[class_] = probZeroFreq
             sumOfZeroFreqs = probZeroFreq * numOfZeroFreqs  # Sum of all those probabilities (Should be 1 - the sum of P of all words in the class)
-            #print("Number of words that don't appear: %d" % (numOfZeroFreqs))
-            #print("Probability of seeing a zero-frequency word: %.15f" % (probZeroFreq))
-            
             sumOfProbabilities = 0
             for p in histogram.values():
                 sumOfProbabilities += p
             sumOfProbabilities += sumOfZeroFreqs
-            #print("sum of probabilities: %.5f" % (sumOfProbabilities), end="\n\n")  # Should be 1
 
     
     def __addToModel(self, label, tokens):
         """Adds a single sample to the model. A sample consists of a label, and tokens - a bag of words feature vector"""
-
-        # self.wordTotals (
-        #   Key: class
-        #   Value: dict (
-        #       Key: wordID
-        #       Value: frequency
 
         for word, freq in tokens.items():
             self.vocab.add(word)  # Add the word to the vocab
@@ -113,15 +111,12 @@ class Model:
     
 
     def predict(self, tokens):
-        """Predicts the class of a review using naive-bayes"""
+        """Predicts the class of a sample in tokenised form"""
         
-        # Choose the class with the maximum probability
-
         classes = [i for i in self.totalClasses.keys()]
         classes.sort()
 
         probabilities = [self.getProbability(tokens, i) for i in classes]
-        #probabilities = [self.getProbability(tokens, i) for i in self.totalClasses.keys()]
 
         maxP = probabilities[0]
         maxI = 0
@@ -130,7 +125,6 @@ class Model:
                 maxI = i
                 maxP = probabilities[i]
         
-        #return maxI + 1  # Return the number of class, not the index (which is index + 1)
         return classes[maxI]  # Return the class with the highest probability
 
     
@@ -140,13 +134,12 @@ class Model:
         pClass = math.log(self.totalClasses[i] / self.total)  # The prior probability of the sample being in class i
         totalP = 0
 
-        # Multiply totalP by the probability of each word in the sample being in class i
+        # Increase totalP by the probability of each word in the sample being in class i
         for word, freq in tokens.items():
             for j in range(freq):
-                #totalP += math.log(self.wordTotals[i].get(word, self.zeroFrequencyProbabilities[i]))
-                totalP += math.log(self.wordTotals[i].get(word, 1))  # Don't include words that don't show up in the class
+                totalP += math.log(self.wordTotals[i].get(word, self.zeroFrequencyProbabilities[i]))
 
-        totalP *= pClass
+        totalP += pClass  # The final posterior probability
         return totalP
 
 
@@ -227,6 +220,8 @@ if __name__ == "__main__":
     accuracy = (numCorrect / total) * 100
 
     print("Accuracy: %.2f\n" % (accuracy))
+    print("Accuracy when sample is positive: %.2f" % (((numPredictedNeg - numFalsePositives) / 12500) * 100))
+    print("Accuracy when sample is negative: %.2f" % (((numPredictedPos - numFalseNegatives) / 12500) * 100))
     
     print("Number of samples in different classes:")
     for k,v  in numberOfTestClasses.items():
