@@ -3,7 +3,7 @@ A naive-bayes classifier trained on the IMDB movie review dataset
 
 # Which File Do I Want?
 - ***classifier.py*** - This is the final classifier. It classifies the reviews into either positive (for reviews with scores 7-10) or negative (for reviews with scores 0-5) classes.
-- - ***createAndSaveModel*** - Run this to create, train and save the model using Pickle for faster loading when you need it.
+- ***createAndSaveModel*** - Run this to create, train and save the model using Pickle for faster loading when you need it.
 
 # Prerequisites
 ## IMDB Dataset
