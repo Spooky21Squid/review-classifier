@@ -180,6 +180,7 @@ if __name__ == "__main__":
 
     predictedClass8 = dict()
     actualClass8 = dict()
+    numberOfTestClasses = dict()
 
     numCorrect = 0
     total = 0
@@ -191,12 +192,19 @@ if __name__ == "__main__":
     for line in contents:
         stopWords.add(line.strip())
 
-    for directory in dataDirs:
+    testDirs = [os.environ['TESTPOSDIR'], os.environ['TESTNEGDIR']]
+    for directory in testDirs:
         for child in Path(directory).iterdir():
             if child.is_file():
                 label = int(re.search(r"_[\d]+" , child.name).group(0)[1:])  # Get label from the filename
                 text = child.read_text()
                 tokens = tokenise(text, stopWords)
+
+                # Count the test sample
+                if label in numberOfTestClasses:
+                    numberOfTestClasses[label] += 1
+                else:
+                    numberOfTestClasses[label] = 1
 
                 # Predict
                 predictedClass = model.predict(tokens)
@@ -242,5 +250,9 @@ if __name__ == "__main__":
     
     print("Predicted Classes:")
     for k,v  in predictedClass8.items():
+        print("%d : %d" % (k, v))
+    
+    print("Number of samples in different classes:")
+    for k,v  in numberOfTestClasses.items():
         print("%d : %d" % (k, v))
     
