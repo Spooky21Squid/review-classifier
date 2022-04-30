@@ -112,7 +112,12 @@ class Model:
         """Predicts the class of a review using naive-bayes"""
         
         # Choose the class with the maximum probability
-        probabilities = [self.getProbability(tokens, i) for i in self.totalClasses.keys()]
+
+        classes = [i for i in self.totalClasses.keys()]
+        classes.sort()
+
+        probabilities = [self.getProbability(tokens, i) for i in classes]
+        #probabilities = [self.getProbability(tokens, i) for i in self.totalClasses.keys()]
 
         maxP = probabilities[0]
         maxI = 0
@@ -121,7 +126,8 @@ class Model:
                 maxI = i
                 maxP = probabilities[i]
         
-        return maxI + 1  # Return the number of class, not the index (which is index + 1)
+        #return maxI + 1  # Return the number of class, not the index (which is index + 1)
+        return classes[maxI]  # Return the class with the highest probability
 
     
     def getProbability(self, tokens, i):
@@ -133,7 +139,8 @@ class Model:
         # Multiply totalP by the probability of each word in the sample being in class i
         for word, freq in tokens.items():
             for j in range(freq):
-                totalP += math.log(self.wordTotals[i].get(word, self.zeroFrequencyProbabilities[i]))
+                #totalP += math.log(self.wordTotals[i].get(word, self.zeroFrequencyProbabilities[i]))
+                totalP += math.log(self.wordTotals[i].get(word, 1))  # Don't include words that don't show up in the class
 
         totalP *= pClass
         return totalP
@@ -171,6 +178,9 @@ if __name__ == "__main__":
 
     # Test Accuracy
 
+    predictedClass8 = dict()
+    actualClass8 = dict()
+
     numCorrect = 0
     total = 0
     withinX = dict()  # Keys: difference, values: frequency
@@ -200,10 +210,37 @@ if __name__ == "__main__":
                     withinX[diff] += 1
                 else:
                     withinX[diff] = 1
+                
+                # Investigate why a difference of 8 is so likely
+                if diff == 8:
+                    if label in actualClass8:
+                        actualClass8[label] += 1
+                    else:
+                        actualClass8[label] = 1
+                    
+                    if predictedClass in predictedClass8:
+                        predictedClass8[predictedClass] += 1
+                    else:
+                        predictedClass8[predictedClass] = 1
     
     accuracy = (numCorrect / total) * 100
 
     print("Accuracy: %.2f\n" % (accuracy))
     print("Differences:")
-    for k,v in withinX.items():
-        print("%d : %.2f" % (k, (v / total) * 100))
+
+    classes = [i for i in withinX.keys()]
+    classes.sort()
+    for k in classes:
+        print("%d : %.2f" % (k, (withinX[k] / total) * 100))
+    
+    print("\nWhen the difference = 8:")
+
+    # What classes are being wrongly predicted with a difference of 8?:
+    print("Actual Classes:")
+    for k,v  in actualClass8.items():
+        print("%d : %d" % (k, v))
+    
+    print("Predicted Classes:")
+    for k,v  in predictedClass8.items():
+        print("%d : %d" % (k, v))
+    
